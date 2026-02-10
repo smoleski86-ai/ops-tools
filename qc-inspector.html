@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Room QC">
+<meta name="theme-color" content="#0f172a">
+<!-- [FIX #15] PWA manifest via data URI — standalone app behavior on home screen -->
+<link rel="manifest" href="data:application/json,%7B%22name%22%3A%22Room%20QC%20Inspector%22%2C%22short_name%22%3A%22Room%20QC%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%230f172a%22%7D">
+<title>Room QC Inspector</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg: #0f172a;
+  --bg-card: #1e293b;
+  --bg-card-alt: #253449;
+  --bg-input: #0f172a;
+  --border: #334155;
+  --border-focus: #60a5fa;
+  --text: #e2e8f0;
+  --text-dim: #64748b;
+  --text-bright: #f8fafc;
+  --accent: #3b82f6;
+  --accent-dim: rgba(59,130,246,0.15);
+  --green: #22c55e;
+  --green-dim: rgba(34,197,94,0.12);
+  --red: #ef4444;
+  --red-dim: rgba(239,68,68,0.12);
+  --amber: #f59e0b;
+  --amber-dim: rgba(245,158,11,0.12);
+  --radius: 10px;
+}
+
+html { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', -apple-system, sans-serif;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  -webkit-tap-highlight-color: transparent;
+  /* [FIX #8] Moved user-select to body, override on form elements */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* [FIX #8] Allow text selection in form elements */
+input, textarea, select {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ─── NAV BAR ─── */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(15,23,42,0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nav-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--text-bright);
+}
+
+.nav-btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(59,130,246,0.25);
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.nav-btn:active { background: rgba(59,130,246,0.25); }
+
+.nav-btns { display: flex; gap: 8px; }
+
+/* ─── VIEWS ─── */
+.view { display: none; padding: 16px; padding-bottom: 100px; }
+.view.active { display: block; }
+
+/* ─── HOME VIEW ─── */
+.home-header {
+  text-align: center;
+  padding: 32px 0 24px;
+}
+
+.home-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-bright);
+  margin-bottom: 6px;
+}
+
+.home-header p {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.stat-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  flex: 1;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  text-align: center;
+}
+
+.stat-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.action-btn {
+  display: block;
+  width: 100%;
+  padding: 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: white;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: all 0.15s;
+}
+
+.action-btn:active { transform: scale(0.98); opacity: 0.9; }
+
+.action-btn.secondary {
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+/* ─── INSPECT VIEW ─── */
+.form-group { margin-bottom: 16px; }
+
+.form-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+
+.form-input, .form-select {
+  width: 100%;
+  padding: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  color: var(--text-bright);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.form-input:focus, .form-select:focus { border-color: var(--border-focus); }
+
+.form-select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2364748b' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 36px;
+}
+
+.form-row { display: flex; gap: 10px; }
+.form-row .form-group { flex: 1; }
+
+/* ─── SECTION GROUPS ─── */
+.section-group {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.section-header h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-bright);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--text-dim);
+  background: var(--bg);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+/* [FIX #19] Progress pill turns green when section is complete */
+.section-count.done {
+  background: var(--green-dim);
+  color: var(--green);
+}
+
+.section-arrow {
+  font-size: 14px;
+  color: var(--text-dim);
+  transition: transform 0.2s;
+}
+
+.section-group.open .section-arrow { transform: rotate(180deg); }
+
+.section-body {
+  display: none;
+  padding: 0 16px 14px;
+}
+
+.section-group.open .section-body { display: block; }
+
+/* ─── CHECKLIST ITEMS ─── */
+.check-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(51,65,85,0.4);
+}
+
+.check-item:last-child { border-bottom: none; }
+
+.check-label {
+  font-size: 14px;
+  color: var(--text);
+  flex: 1;
+  padding-right: 8px;
+}
+
+.check-toggle { display: flex; gap: 4px; }
+
+/* [FIX #11] Larger touch targets — min 44px per Apple HIG */
+.toggle-btn {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.12s;
+  min-width: 44px;
+  min-height: 44px;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggle-btn.yes.active {
+  background: var(--green-dim);
+  border-color: var(--green);
+  color: var(--green);
+}
+
+.toggle-btn.no.active {
+  background: var(--red-dim);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.toggle-btn.na.active {
+  background: var(--bg-card-alt);
+  border-color: var(--text-dim);
+  color: var(--text-dim);
+}
+
+/* ─── STAR RATING ─── */
+.rating-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(51,65,85,0.4);
+}
+
+.rating-row:last-child { border-bottom: none; }
+
+.rating-label {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.star-group { display: flex; gap: 4px; }
+
+/* [FIX #11] Larger star touch targets */
+.star-btn {
+  font-size: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--border);
+  transition: color 0.1s, transform 0.1s;
+  padding: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.star-btn.filled { color: var(--amber); }
+.star-btn:active { transform: scale(1.15); }
+
+/* ─── NOTES ─── */
+.form-textarea {
+  width: 100%;
+  padding: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  color: var(--text-bright);
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-textarea:focus { border-color: var(--border-focus); }
+
+/* ─── HISTORY VIEW ─── */
+.history-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.history-card:active { background: var(--bg-card-alt); }
+
+.history-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.history-room {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.history-score {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.history-meta {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.history-pills {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.pill.fail { background: var(--red-dim); color: var(--red); }
+.pill.pass { background: var(--green-dim); color: var(--green); }
+.pill.type { background: var(--accent-dim); color: var(--accent); }
+
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-dim);
+}
+
+.empty-state p { font-size: 14px; margin-top: 8px; }
+
+/* ─── FILTER BAR ─── */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.filter-bar::-webkit-scrollbar { display: none; }
+
+.filter-chip {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-dim);
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.filter-chip.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ─── SETTINGS VIEW ─── */
+.settings-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.settings-section h3 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+.hk-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.hk-tag {
+  font-size: 12px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hk-remove {
+  font-size: 14px;
+  color: var(--red);
+  cursor: pointer;
+  line-height: 1;
+  min-width: 20px;
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.add-row { display: flex; gap: 8px; }
+.add-row input { flex: 1; }
+
+.add-btn {
+  padding: 10px 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-dim);
+  border: 1px solid rgba(59,130,246,0.25);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* ─── DETAIL VIEW ─── */
+.detail-header {
+  text-align: center;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.detail-room {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+
+.detail-date {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 14px;
+}
+
+.detail-row .label { color: var(--text-dim); }
+.detail-row .value { color: var(--text-bright); font-weight: 500; }
+
+.detail-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.detail-section h4 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+.yn-yes { color: var(--green); }
+.yn-no { color: var(--red); }
+.yn-na { color: var(--text-dim); }
+
+/* ─── BOTTOM TAB BAR ─── */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(15,23,42,0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+  z-index: 100;
+}
+
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.tab-icon { font-size: 20px; }
+
+.tab-label {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+}
+
+.tab.active .tab-label { color: var(--accent); }
+
+/* ─── TOAST ─── */
+.toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--green);
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 24px;
+  border-radius: 8px;
+  opacity: 0;
+  transition: all 0.3s;
+  z-index: 200;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ─── DIALOGS ─── */
+.overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.overlay.show { display: flex; }
+
+.dialog {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  max-width: 300px;
+  width: 100%;
+  text-align: center;
+}
+
+.dialog h3 {
+  color: var(--text-bright);
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.dialog p {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin-bottom: 20px;
+}
+
+.dialog-btns { display: flex; gap: 10px; }
+
+.dialog-btn {
+  flex: 1;
+  padding: 10px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  border: none;
+}
+
+.dialog-btn.cancel {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.dialog-btn.danger {
+  background: var(--red);
+  color: white;
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<div class="nav">
+  <div class="nav-title" id="navTitle">Room QC</div>
+  <div class="nav-btns" id="navBtns"></div>
+</div>
+
+<!-- HOME -->
+<div class="view active" id="viewHome">
+  <div class="home-header">
+    <h2>Room QC Inspector</h2>
+    <p id="homeDate"></p>
+  </div>
+  <div class="stat-row">
+    <div class="stat-card">
+      <div class="stat-num" id="statToday">0</div>
+      <div class="stat-label">Today</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statTotal">0</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" id="statAvg">—</div>
+      <div class="stat-label">Avg Score</div>
+    </div>
+  </div>
+  <button class="action-btn" onclick="startInspection()">＋ New Inspection</button>
+  <button class="action-btn secondary" onclick="showView('history')">📋 View History</button>
+</div>
+
+<!-- INSPECT -->
+<div class="view" id="viewInspect">
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-label">Room #</label>
+      <input class="form-input" type="text" id="fRoom" placeholder="e.g. 226" inputmode="text" autocomplete="off">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Type</label>
+      <select class="form-select" id="fType" onchange="onTypeChange()">
+        <option value="Lodge">Lodge</option>
+        <option value="Cabin">Cabin</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-label">Bed Config</label>
+      <select class="form-select" id="fBed">
+        <option value="2Q">2 Queen</option>
+        <option value="1Q">1 Queen</option>
+        <option value="1K">1 King</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Housekeeper</label>
+      <select class="form-select" id="fHousekeeper">
+        <option value="">Select...</option>
+      </select>
+    </div>
+  </div>
+  <div class="form-group">
+    <label class="form-label">Inspector</label>
+    <select class="form-select" id="fInspector">
+      <option value="">Select...</option>
+    </select>
+  </div>
+
+  <div id="checklistContainer"></div>
+
+  <div class="form-group" style="margin-top:16px">
+    <label class="form-label">Notes</label>
+    <textarea class="form-textarea" id="fNotes" placeholder="Optional notes about this room..."></textarea>
+  </div>
+
+  <button class="action-btn" id="saveBtn" onclick="saveInspection()" style="margin-top:8px">✓ Save Inspection</button>
+</div>
+
+<!-- HISTORY -->
+<div class="view" id="viewHistory">
+  <div class="filter-bar" id="filterBar"></div>
+  <div id="historyList"></div>
+</div>
+
+<!-- DETAIL -->
+<div class="view" id="viewDetail">
+  <div id="detailContent"></div>
+  <button class="action-btn secondary" onclick="showView('history')" style="margin-top:16px">← Back to History</button>
+  <button class="action-btn" style="background:var(--red);margin-top:8px" onclick="confirmDelete()">Delete Inspection</button>
+</div>
+
+<!-- SETTINGS -->
+<div class="view" id="viewSettings">
+  <div class="settings-section">
+    <h3>Housekeepers</h3>
+    <div class="hk-list" id="hkList"></div>
+    <div class="add-row">
+      <input class="form-input" type="text" id="addHkInput" placeholder="Add housekeeper name...">
+      <button class="add-btn" onclick="addHousekeeper()">Add</button>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h3>Inspectors</h3>
+    <div class="hk-list" id="inspList"></div>
+    <div class="add-row">
+      <input class="form-input" type="text" id="addInspInput" placeholder="Add inspector name...">
+      <button class="add-btn" onclick="addInspector()">Add</button>
+    </div>
+  </div>
+  <div class="settings-section">
+    <h3>Data</h3>
+    <button class="action-btn secondary" onclick="exportCSV()" style="margin-bottom:8px">📤 Export All to CSV</button>
+    <button class="action-btn secondary" onclick="confirmClearAll()" style="border-color:var(--red);color:var(--red)">🗑 Clear All Data</button>
+  </div>
+  <div class="settings-section">
+    <h3>About</h3>
+    <p style="font-size:12px;color:var(--text-dim);line-height:1.6">
+      Room QC Inspector v1.1<br>
+      All data stored locally on this device.<br>
+      Export to CSV regularly to back up your data.
+    </p>
+  </div>
+</div>
+
+<!-- TAB BAR -->
+<div class="tab-bar">
+  <div class="tab active" onclick="navTo('home')" data-view="home">
+    <div class="tab-icon">🏠</div>
+    <div class="tab-label">Home</div>
+  </div>
+  <div class="tab" onclick="navTo('inspect')" data-view="inspect">
+    <div class="tab-icon">＋</div>
+    <div class="tab-label">Inspect</div>
+  </div>
+  <div class="tab" onclick="navTo('history')" data-view="history">
+    <div class="tab-icon">📋</div>
+    <div class="tab-label">History</div>
+  </div>
+  <div class="tab" onclick="navTo('settings')" data-view="settings">
+    <div class="tab-icon">⚙️</div>
+    <div class="tab-label">Settings</div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- [FIX #12] All overlays get backdrop dismiss -->
+<div class="overlay" id="deleteOverlay" onclick="if(event.target===this)hideOverlay('deleteOverlay')">
+  <div class="dialog">
+    <h3>Delete Inspection?</h3>
+    <p>This can't be undone.</p>
+    <div class="dialog-btns">
+      <button class="dialog-btn cancel" onclick="hideOverlay('deleteOverlay')">Cancel</button>
+      <button class="dialog-btn danger" onclick="doDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="clearOverlay" onclick="if(event.target===this)hideOverlay('clearOverlay')">
+  <div class="dialog">
+    <h3>Clear All Data?</h3>
+    <p>This deletes all inspections, housekeepers, and inspectors. Export first!</p>
+    <div class="dialog-btns">
+      <button class="dialog-btn cancel" onclick="hideOverlay('clearOverlay')">Cancel</button>
+      <button class="dialog-btn danger" onclick="doClearAll()">Clear</button>
+    </div>
+  </div>
+</div>
+
+<!-- [FIX #10] Unsaved work confirmation -->
+<div class="overlay" id="unsavedOverlay" onclick="if(event.target===this)hideOverlay('unsavedOverlay')">
+  <div class="dialog">
+    <h3>Unsaved Inspection</h3>
+    <p>You have an inspection in progress. Discard it?</p>
+    <div class="dialog-btns">
+      <button class="dialog-btn cancel" onclick="hideOverlay('unsavedOverlay')">Keep Editing</button>
+      <button class="dialog-btn danger" onclick="discardAndNavigate()">Discard</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  CONSTANTS & STATE
+// ═══════════════════════════════════════════════
+
+const SCHEMA_VERSION = 1; // [FIX #17]
+
+const STORAGE = {
+  inspections: 'qc_inspections',
+  housekeepers: 'qc_housekeepers',
+  inspectors: 'qc_inspectors',
+  lastInspector: 'qc_last_inspector' // [FIX #13]
+};
+
+let currentView = 'home';
+let currentDetailId = null;
+let activeFilter = 'all';
+let formDirty = false;       // [FIX #10]
+let pendingNavTarget = null;  // [FIX #10]
+let saving = false;           // [FIX #14]
+
+// ═══════════════════════════════════════════════
+//  UTILITIES
+// ═══════════════════════════════════════════════
+
+// [FIX #3] HTML escape — prevents XSS from user-generated content
+function esc(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// [FIX #1] Local date string — not UTC
+function localDateStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
+
+function load(key) {
+  try { return JSON.parse(localStorage.getItem(key)) || []; }
+  catch { return []; }
+}
+
+// [FIX #7] Save with storage-full feedback
+function save(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify(data));
+    return true;
+  } catch(e) {
+    toast('Storage full — export CSV & clear old data', 'var(--red)');
+    return false;
+  }
+}
+
+function loadStr(key) {
+  try { return localStorage.getItem(key) || ''; }
+  catch { return ''; }
+}
+
+function saveStr(key, val) {
+  try { localStorage.setItem(key, val); } catch {}
+}
+
+// ═══════════════════════════════════════════════
+//  CHECKLIST DEFINITION
+// ═══════════════════════════════════════════════
+
+const CHECKLIST = [
+  {
+    section: 'Bathroom',
+    icon: '🚿',
+    items: [
+      { id: 'bath_hair_floor', label: 'Floor free of hair' },
+      { id: 'bath_hair_counter', label: 'Counter free of hair' },
+      { id: 'bath_hair_shower', label: 'Shower/tub free of hair' },
+      { id: 'bath_toilet_clean', label: 'Toilet clean, no stains' },
+      { id: 'bath_mirror', label: 'Mirror clean' },
+      { id: 'bath_towels', label: 'Towels stocked & folded' },
+      { id: 'bath_toiletries', label: 'Toiletries stocked' },
+      { id: 'bath_trash', label: 'Trash empty' }
+    ],
+    ratings: [
+      { id: 'rate_bathroom', label: 'Bathroom Overall' }
+    ]
+  },
+  {
+    section: 'Bedroom',
+    icon: '🛏',
+    items: [
+      { id: 'bed_made', label: 'Bed(s) properly made' },
+      { id: 'bed_linens', label: 'Linens clean, no stains' },
+      { id: 'bed_pillows', label: 'Pillows fresh & plumped' },
+      { id: 'bed_floor', label: 'Floor/carpet clean' },
+      { id: 'bed_surfaces', label: 'Surfaces dusted' },
+      { id: 'bed_trash', label: 'Trash empty' },
+      { id: 'bed_lights', label: 'All lights working' }
+    ],
+    ratings: [
+      { id: 'rate_bedroom', label: 'Bedroom Overall' }
+    ]
+  },
+  {
+    section: 'Kitchenette',
+    icon: '🍳',
+    cabinOnly: true,
+    items: [
+      { id: 'kit_dishes', label: 'Dishes/utensils clean & stocked' },
+      { id: 'kit_fridge', label: 'Fridge clean & empty' },
+      { id: 'kit_microwave', label: 'Microwave clean' },
+      { id: 'kit_coffee', label: 'Coffee supplies stocked' },
+      { id: 'kit_counter', label: 'Counters clean' },
+      { id: 'kit_sink', label: 'Sink clean, no residue' }
+    ],
+    ratings: [
+      { id: 'rate_kitchen', label: 'Kitchenette Overall' }
+    ]
+  },
+  {
+    section: 'General',
+    icon: '✓',
+    items: [
+      { id: 'gen_door', label: 'Door & lock functioning' },
+      { id: 'gen_heat', label: 'Heating working' },
+      { id: 'gen_windows', label: 'Windows clean' },
+      { id: 'gen_supplies', label: 'Guest info & supplies present' },
+      { id: 'gen_smell', label: 'Room smells fresh' },
+      { id: 'gen_prev_guest', label: 'No previous guest items left' }
+    ],
+    ratings: [
+      { id: 'rate_overall', label: 'Overall Impression' }
+    ]
+  }
+];
+
+// ═══════════════════════════════════════════════
+//  OVERLAY HELPER
+// ═══════════════════════════════════════════════
+
+// [FIX #12] Unified overlay show/hide
+function showOverlay(id) { document.getElementById(id).classList.add('show'); }
+function hideOverlay(id) { document.getElementById(id).classList.remove('show'); }
+
+// ═══════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════
+
+// [FIX #10] All navigation goes through navTo() which checks for dirty form
+function navTo(target) {
+  if (currentView === 'inspect' && formDirty && target !== 'inspect') {
+    pendingNavTarget = target;
+    showOverlay('unsavedOverlay');
+    return;
+  }
+  if (target === 'inspect') {
+    startInspection();
+  } else {
+    showView(target);
+  }
+}
+
+function discardAndNavigate() {
+  hideOverlay('unsavedOverlay');
+  formDirty = false;
+  const target = pendingNavTarget;
+  pendingNavTarget = null;
+  if (target === 'inspect') startInspection();
+  else showView(target);
+}
+
+function showView(view) {
+  currentView = view;
+  formDirty = false;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view' + view.charAt(0).toUpperCase() + view.slice(1)).classList.add('active');
+
+  // [FIX #18] Detail view highlights History tab
+  document.querySelectorAll('.tab').forEach(t => {
+    const tv = t.dataset.view;
+    t.classList.toggle('active', tv === view || (view === 'detail' && tv === 'history'));
+  });
+
+  const titles = { home: 'Room QC', inspect: 'New Inspection', history: 'History', detail: 'Detail', settings: 'Settings' };
+  document.getElementById('navTitle').textContent = titles[view] || 'Room QC';
+  document.getElementById('navBtns').innerHTML = '';
+
+  if (view === 'home') refreshHome();
+  if (view === 'history') refreshHistory();
+  if (view === 'settings') refreshSettings();
+
+  window.scrollTo(0, 0);
+}
+
+// ═══════════════════════════════════════════════
+//  HOME
+// ═══════════════════════════════════════════════
+
+function refreshHome() {
+  const all = load(STORAGE.inspections);
+  const today = localDateStr(); // [FIX #1]
+  const todayCount = all.filter(i => i.date === today).length;
+
+  document.getElementById('homeDate').textContent = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  document.getElementById('statToday').textContent = todayCount;
+  document.getElementById('statTotal').textContent = all.length;
+
+  // [FIX #2] Only average inspections that actually have an overall rating
+  const rated = all.filter(i => i.ratings && i.ratings.rate_overall > 0);
+  if (rated.length > 0) {
+    const avg = rated.reduce((s, i) => s + i.ratings.rate_overall, 0) / rated.length;
+    document.getElementById('statAvg').textContent = avg.toFixed(1);
+  } else {
+    document.getElementById('statAvg').textContent = '—';
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  INSPECT FORM
+// ═══════════════════════════════════════════════
+
+function startInspection() {
+  currentView = 'inspect';
+  formDirty = false;
+  saving = false;
+
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('viewInspect').classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === 'inspect'));
+  document.getElementById('navTitle').textContent = 'New Inspection';
+  document.getElementById('navBtns').innerHTML = '';
+
+  document.getElementById('fRoom').value = '';
+  document.getElementById('fType').value = 'Lodge';
+  document.getElementById('fBed').value = '2Q';
+  document.getElementById('fNotes').value = '';
+  document.getElementById('saveBtn').disabled = false;
+  populateDropdowns();
+  buildChecklist();
+
+  window.scrollTo(0, 0);
+}
+
+function populateDropdowns() {
+  const hks = load(STORAGE.housekeepers);
+  const insp = load(STORAGE.inspectors);
+
+  // [FIX #20] Escape names in dropdown values
+  const hkSel = document.getElementById('fHousekeeper');
+  hkSel.innerHTML = '<option value="">Select...</option>' +
+    hks.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+
+  const iSel = document.getElementById('fInspector');
+  iSel.innerHTML = '<option value="">Select...</option>' +
+    insp.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+
+  // [FIX #13] Restore last used inspector
+  const lastInsp = loadStr(STORAGE.lastInspector);
+  if (lastInsp && insp.includes(lastInsp)) {
+    iSel.value = lastInsp;
+  }
+}
+
+function onTypeChange() {
+  formDirty = true;
+  buildChecklist();
+}
+
+function buildChecklist() {
+  const type = document.getElementById('fType').value;
+  const container = document.getElementById('checklistContainer');
+  container.innerHTML = '';
+
+  let sectionIndex = 0;
+  CHECKLIST.forEach((section) => {
+    if (section.cabinOnly && type !== 'Cabin') return;
+
+    const group = document.createElement('div');
+    // [FIX #9] Only first visible section starts open
+    group.className = sectionIndex === 0 ? 'section-group open' : 'section-group';
+    group.dataset.section = section.section;
+    sectionIndex++;
+
+    group.innerHTML = `
+      <div class="section-header" onclick="this.parentElement.classList.toggle('open')">
+        <h3>${section.icon} ${section.section} <span class="section-count" data-counter="${section.section}">${section.items.length} items</span></h3>
+        <span class="section-arrow">▾</span>
+      </div>
+      <div class="section-body">
+        ${section.items.map(item => `
+          <div class="check-item">
+            <div class="check-label">${esc(item.label)}</div>
+            <div class="check-toggle">
+              <button class="toggle-btn yes" data-id="${item.id}" data-section="${section.section}" data-val="Y" onclick="setToggle(this)">Y</button>
+              <button class="toggle-btn no" data-id="${item.id}" data-section="${section.section}" data-val="N" onclick="setToggle(this)">N</button>
+              <button class="toggle-btn na" data-id="${item.id}" data-section="${section.section}" data-val="NA" onclick="setToggle(this)">—</button>
+            </div>
+          </div>
+        `).join('')}
+        ${section.ratings.map(r => `
+          <div class="rating-row">
+            <div class="rating-label">${esc(r.label)}</div>
+            <div class="star-group">
+              ${[1,2,3,4,5].map(n => `<button class="star-btn" data-id="${r.id}" data-val="${n}" onclick="setRating(this)">★</button>`).join('')}
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    container.appendChild(group);
+  });
+}
+
+function setToggle(btn) {
+  formDirty = true;
+  const btns = btn.parentElement.querySelectorAll('.toggle-btn');
+  btns.forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  updateSectionCount(btn.dataset.section); // [FIX #19]
+}
+
+function setRating(btn) {
+  formDirty = true;
+  const val = parseInt(btn.dataset.val);
+  const stars = btn.parentElement.querySelectorAll('.star-btn');
+  stars.forEach((s, i) => s.classList.toggle('filled', i < val));
+}
+
+// [FIX #19] Update section header with completion progress
+function updateSectionCount(sectionName) {
+  const section = CHECKLIST.find(s => s.section === sectionName);
+  if (!section) return;
+  const group = document.querySelector(`[data-section="${sectionName}"]`);
+  if (!group) return;
+
+  const answered = group.querySelectorAll('.toggle-btn.active').length;
+  const total = section.items.length;
+  const counter = group.querySelector(`[data-counter="${sectionName}"]`);
+  if (counter) {
+    counter.textContent = `${answered}/${total}`;
+    counter.classList.toggle('done', answered === total);
+  }
+}
+
+// Mark form dirty on any input change
+document.addEventListener('input', function(e) {
+  if (currentView === 'inspect') formDirty = true;
+});
+
+function gatherFormData() {
+  return {
+    id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    v: SCHEMA_VERSION, // [FIX #17]
+    date: localDateStr(), // [FIX #1]
+    time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+    room: document.getElementById('fRoom').value.trim(),
+    type: document.getElementById('fType').value,
+    bed: document.getElementById('fBed').value,
+    housekeeper: document.getElementById('fHousekeeper').value,
+    inspector: document.getElementById('fInspector').value,
+    checks: gatherChecks(),
+    ratings: gatherRatings(),
+    notes: document.getElementById('fNotes').value.trim()
+  };
+}
+
+function gatherChecks() {
+  const checks = {};
+  document.querySelectorAll('.toggle-btn.active').forEach(btn => {
+    checks[btn.dataset.id] = btn.dataset.val;
+  });
+  return checks;
+}
+
+function gatherRatings() {
+  const ratings = {};
+  document.querySelectorAll('.star-group').forEach(group => {
+    const filled = group.querySelectorAll('.star-btn.filled').length;
+    const id = group.querySelector('.star-btn').dataset.id;
+    if (filled > 0) ratings[id] = filled;
+  });
+  return ratings;
+}
+
+// [FIX #14] Double-tap protection
+function saveInspection() {
+  if (saving) return;
+
+  const data = gatherFormData();
+
+  if (!data.room) {
+    toast('Enter a room number', 'var(--red)');
+    return;
+  }
+
+  saving = true;
+  document.getElementById('saveBtn').disabled = true;
+
+  const all = load(STORAGE.inspections);
+  all.unshift(data);
+  if (!save(STORAGE.inspections, all)) {
+    saving = false;
+    document.getElementById('saveBtn').disabled = false;
+    return; // [FIX #7] save() already showed toast
+  }
+
+  // [FIX #13] Remember inspector
+  if (data.inspector) saveStr(STORAGE.lastInspector, data.inspector);
+
+  formDirty = false;
+  toast('Inspection saved ✓');
+  showView('home');
+}
+
+// ═══════════════════════════════════════════════
+//  HISTORY
+// ═══════════════════════════════════════════════
+
+function refreshHistory() {
+  const all = load(STORAGE.inspections);
+  const list = document.getElementById('historyList');
+  const bar = document.getElementById('filterBar');
+
+  const dates = [...new Set(all.map(i => i.date))].sort().reverse();
+  bar.innerHTML = `<div class="filter-chip ${activeFilter === 'all' ? 'active' : ''}" onclick="setFilter('all')">All</div>` +
+    dates.slice(0, 10).map(d => {
+      const label = new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return `<div class="filter-chip ${activeFilter === d ? 'active' : ''}" onclick="setFilter('${esc(d)}')">${esc(label)}</div>`;
+    }).join('');
+
+  const filtered = activeFilter === 'all' ? all : all.filter(i => i.date === activeFilter);
+
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div style="font-size:36px">📋</div><p>No inspections yet</p></div>`;
+    return;
+  }
+
+  // [FIX #3] All user content escaped
+  list.innerHTML = filtered.map(i => {
+    const score = (i.ratings && i.ratings.rate_overall) || 0;
+    const scoreColor = score >= 4 ? 'var(--green)' : score >= 3 ? 'var(--amber)' : score > 0 ? 'var(--red)' : 'var(--text-dim)';
+    const failCount = Object.values(i.checks || {}).filter(v => v === 'N').length;
+    const dateStr = new Date(i.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+    return `
+      <div class="history-card" onclick="showDetail('${esc(i.id)}')">
+        <div class="history-top">
+          <div class="history-room">Room ${esc(i.room)}</div>
+          <div class="history-score" style="color:${scoreColor}">${score > 0 ? '★ ' + score + '/5' : 'No rating'}</div>
+        </div>
+        <div class="history-meta">${esc(dateStr)} · ${esc(i.time || '')} · ${esc(i.housekeeper || 'No HK')} · ${esc(i.inspector || 'No inspector')}</div>
+        <div class="history-pills">
+          <span class="pill type">${esc(i.type)}</span>
+          ${failCount > 0 ? `<span class="pill fail">${failCount} issue${failCount > 1 ? 's' : ''}</span>` : '<span class="pill pass">All clear</span>'}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function setFilter(f) {
+  activeFilter = f;
+  refreshHistory();
+}
+
+// ═══════════════════════════════════════════════
+//  DETAIL VIEW
+// ═══════════════════════════════════════════════
+
+function showDetail(id) {
+  const all = load(STORAGE.inspections);
+  const item = all.find(i => i.id === id);
+  if (!item) return;
+
+  currentDetailId = id;
+  showView('detail');
+
+  const dateStr = new Date(item.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' });
+
+  // [FIX #3] All user content escaped
+  let html = `
+    <div class="detail-header">
+      <div class="detail-room">Room ${esc(item.room)}</div>
+      <div class="detail-date">${esc(dateStr)} · ${esc(item.time || '')}</div>
+    </div>
+    <div class="detail-section">
+      <h4>Info</h4>
+      <div class="detail-row"><span class="label">Type</span><span class="value">${esc(item.type)} · ${esc(item.bed)}</span></div>
+      <div class="detail-row"><span class="label">Housekeeper</span><span class="value">${esc(item.housekeeper || '—')}</span></div>
+      <div class="detail-row"><span class="label">Inspector</span><span class="value">${esc(item.inspector || '—')}</span></div>
+    </div>
+  `;
+
+  CHECKLIST.forEach(section => {
+    if (section.cabinOnly && item.type !== 'Cabin') return;
+    const hasItems = section.items.some(it => item.checks && item.checks[it.id]);
+    const hasRatings = section.ratings.some(r => item.ratings && item.ratings[r.id]);
+    if (!hasItems && !hasRatings) return;
+
+    html += `<div class="detail-section"><h4>${section.icon} ${esc(section.section)}</h4>`;
+
+    section.items.forEach(it => {
+      const v = item.checks && item.checks[it.id];
+      if (!v) return;
+      const cls = v === 'Y' ? 'yn-yes' : v === 'N' ? 'yn-no' : 'yn-na';
+      const symbol = v === 'Y' ? '✓' : v === 'N' ? '✗' : '—';
+      html += `<div class="detail-row"><span class="label">${esc(it.label)}</span><span class="value ${cls}">${symbol}</span></div>`;
+    });
+
+    section.ratings.forEach(r => {
+      const v = item.ratings && item.ratings[r.id];
+      if (!v) return;
+      html += `<div class="detail-row"><span class="label">${esc(r.label)}</span><span class="value" style="color:var(--amber)">★ ${v}/5</span></div>`;
+    });
+
+    html += `</div>`;
+  });
+
+  if (item.notes) {
+    // [FIX #16] Preserve line breaks after escaping
+    html += `<div class="detail-section"><h4>Notes</h4><p style="font-size:14px;line-height:1.6;color:var(--text)">${esc(item.notes).replace(/\n/g, '<br>')}</p></div>`;
+  }
+
+  document.getElementById('detailContent').innerHTML = html;
+}
+
+function confirmDelete() { showOverlay('deleteOverlay'); }
+
+function doDelete() {
+  let all = load(STORAGE.inspections);
+  all = all.filter(i => i.id !== currentDetailId);
+  save(STORAGE.inspections, all);
+  hideOverlay('deleteOverlay');
+  toast('Deleted');
+  showView('history');
+}
+
+// ═══════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════
+
+function refreshSettings() {
+  renderNameList('hkList', STORAGE.housekeepers, 'hk');
+  renderNameList('inspList', STORAGE.inspectors, 'insp');
+}
+
+// [FIX #4] Unified name list renderer using data-idx instead of inline onclick
+function renderNameList(containerId, storageKey, type) {
+  const names = load(storageKey);
+  const el = document.getElementById(containerId);
+  if (names.length === 0) {
+    el.innerHTML = `<span style="font-size:12px;color:var(--text-dim)">None added yet</span>`;
+    return;
+  }
+  el.innerHTML = names.map((n, i) =>
+    `<div class="hk-tag">${esc(n)} <span class="hk-remove" data-type="${type}" data-idx="${i}">×</span></div>`
+  ).join('');
+}
+
+// [FIX #4] Event delegation — handles any name with any characters
+document.addEventListener('click', function(e) {
+  if (!e.target.classList.contains('hk-remove')) return;
+  const type = e.target.dataset.type;
+  const idx = parseInt(e.target.dataset.idx);
+  const key = type === 'hk' ? STORAGE.housekeepers : STORAGE.inspectors;
+  const names = load(key);
+  if (idx >= 0 && idx < names.length) {
+    names.splice(idx, 1);
+    save(key, names);
+    refreshSettings();
+  }
+});
+
+function addHousekeeper() {
+  const input = document.getElementById('addHkInput');
+  const name = input.value.trim();
+  if (!name) return;
+  const hks = load(STORAGE.housekeepers);
+  if (!hks.includes(name)) {
+    hks.push(name);
+    hks.sort();
+    save(STORAGE.housekeepers, hks);
+  }
+  input.value = '';
+  refreshSettings();
+}
+
+function addInspector() {
+  const input = document.getElementById('addInspInput');
+  const name = input.value.trim();
+  if (!name) return;
+  const insp = load(STORAGE.inspectors);
+  if (!insp.includes(name)) {
+    insp.push(name);
+    insp.sort();
+    save(STORAGE.inspectors, insp);
+  }
+  input.value = '';
+  refreshSettings();
+}
+
+// ═══════════════════════════════════════════════
+//  CSV EXPORT
+// ═══════════════════════════════════════════════
+
+function exportCSV() {
+  const all = load(STORAGE.inspections);
+  if (all.length === 0) {
+    toast('No data to export', 'var(--amber)');
+    return;
+  }
+
+  const allCheckIds = [];
+  const allRatingIds = [];
+  CHECKLIST.forEach(s => {
+    s.items.forEach(i => { if (!allCheckIds.includes(i.id)) allCheckIds.push(i.id); });
+    s.ratings.forEach(r => { if (!allRatingIds.includes(r.id)) allRatingIds.push(r.id); });
+  });
+
+  const checkLabels = {};
+  const ratingLabels = {};
+  CHECKLIST.forEach(s => {
+    s.items.forEach(i => checkLabels[i.id] = i.label);
+    s.ratings.forEach(r => ratingLabels[r.id] = r.label);
+  });
+
+  const headers = ['Date', 'Time', 'Room', 'Type', 'Bed Config', 'Housekeeper', 'Inspector',
+    ...allCheckIds.map(id => checkLabels[id] || id),
+    ...allRatingIds.map(id => ratingLabels[id] || id),
+    'Notes'
+  ];
+
+  // [FIX #5] Proper CSV cell escaping — handles quotes, commas, and newlines
+  function csvCell(val) {
+    const s = String(val == null ? '' : val);
+    return '"' + s.replace(/"/g, '""').replace(/\r?\n/g, ' ') + '"';
+  }
+
+  const rows = all.map(i => [
+    i.date, i.time || '', i.room, i.type, i.bed, i.housekeeper || '', i.inspector || '',
+    ...allCheckIds.map(id => (i.checks && i.checks[id]) || ''),
+    ...allRatingIds.map(id => (i.ratings && i.ratings[id]) || ''),
+    i.notes || ''
+  ]);
+
+  let csv = headers.map(csvCell).join(',') + '\n';
+  rows.forEach(r => { csv += r.map(csvCell).join(',') + '\n'; });
+
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `room_qc_export_${localDateStr()}.csv`; // [FIX #1]
+  a.click();
+  URL.revokeObjectURL(url);
+
+  toast('CSV exported ✓');
+}
+
+// ═══════════════════════════════════════════════
+//  CLEAR ALL
+// ═══════════════════════════════════════════════
+
+function confirmClearAll() { showOverlay('clearOverlay'); }
+
+function doClearAll() {
+  localStorage.removeItem(STORAGE.inspections);
+  localStorage.removeItem(STORAGE.housekeepers);
+  localStorage.removeItem(STORAGE.inspectors);
+  localStorage.removeItem(STORAGE.lastInspector);
+  hideOverlay('clearOverlay');
+  toast('All data cleared');
+  refreshSettings();
+  showView('home');
+}
+
+// ═══════════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════════
+
+function toast(msg, color) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = color || 'var(--green)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ═══════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════
+
+refreshHome();
+
+document.getElementById('addHkInput').addEventListener('keydown', e => { if (e.key === 'Enter') addHousekeeper(); });
+document.getElementById('addInspInput').addEventListener('keydown', e => { if (e.key === 'Enter') addInspector(); });
+</script>
+</body>
+</html>
