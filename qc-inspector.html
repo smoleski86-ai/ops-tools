@@ -775,17 +775,25 @@ input, textarea, select {
       </select>
     </div>
     <div class="form-group">
-      <label class="form-label">Housekeeper</label>
+      <label class="form-label">Housekeeper 1</label>
       <select class="form-select" id="fHousekeeper">
         <option value="">Select...</option>
       </select>
     </div>
   </div>
-  <div class="form-group">
+  <div class="form-row">
+    <div class="form-group">
+      <label class="form-label">Housekeeper 2</label>
+      <select class="form-select" id="fHousekeeper2">
+        <option value="">None</option>
+      </select>
+    </div>
+    <div class="form-group">
     <label class="form-label">Inspector</label>
     <select class="form-select" id="fInspector">
       <option value="">Select...</option>
     </select>
+    </div>
   </div>
 
   <div id="checklistContainer"></div>
@@ -837,7 +845,7 @@ input, textarea, select {
   <div class="settings-section">
     <h3>About</h3>
     <p style="font-size:12px;color:var(--text-dim);line-height:1.6">
-      Room QC Inspector v1.1<br>
+      Room QC Inspector v1.2<br>
       All data stored locally on this device.<br>
       Export to CSV regularly to back up your data.
     </p>
@@ -1158,6 +1166,10 @@ function populateDropdowns() {
   hkSel.innerHTML = '<option value="">Select...</option>' +
     hks.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
 
+  const hkSel2 = document.getElementById('fHousekeeper2');
+  hkSel2.innerHTML = '<option value="">None</option>' +
+    hks.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
+
   const iSel = document.getElementById('fInspector');
   iSel.innerHTML = '<option value="">Select...</option>' +
     insp.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('');
@@ -1255,6 +1267,9 @@ function updateSectionCount(sectionName) {
 document.addEventListener('input', function(e) {
   if (currentView === 'inspect') formDirty = true;
 });
+document.addEventListener('change', function(e) {
+  if (currentView === 'inspect') formDirty = true;
+});
 
 function gatherFormData() {
   return {
@@ -1266,6 +1281,7 @@ function gatherFormData() {
     type: document.getElementById('fType').value,
     bed: document.getElementById('fBed').value,
     housekeeper: document.getElementById('fHousekeeper').value,
+    housekeeper2: document.getElementById('fHousekeeper2').value,
     inspector: document.getElementById('fInspector').value,
     checks: gatherChecks(),
     ratings: gatherRatings(),
@@ -1357,7 +1373,7 @@ function refreshHistory() {
           <div class="history-room">Room ${esc(i.room)}</div>
           <div class="history-score" style="color:${scoreColor}">${score > 0 ? '★ ' + score + '/5' : 'No rating'}</div>
         </div>
-        <div class="history-meta">${esc(dateStr)} · ${esc(i.time || '')} · ${esc(i.housekeeper || 'No HK')} · ${esc(i.inspector || 'No inspector')}</div>
+        <div class="history-meta">${esc(dateStr)} · ${esc(i.time || '')} · ${esc(i.housekeeper ? (i.housekeeper2 ? i.housekeeper + ' & ' + i.housekeeper2 : i.housekeeper) : 'No HK')} · ${esc(i.inspector || 'No inspector')}</div>
         <div class="history-pills">
           <span class="pill type">${esc(i.type)}</span>
           ${failCount > 0 ? `<span class="pill fail">${failCount} issue${failCount > 1 ? 's' : ''}</span>` : '<span class="pill pass">All clear</span>'}
@@ -1395,7 +1411,7 @@ function showDetail(id) {
     <div class="detail-section">
       <h4>Info</h4>
       <div class="detail-row"><span class="label">Type</span><span class="value">${esc(item.type)} · ${esc(item.bed)}</span></div>
-      <div class="detail-row"><span class="label">Housekeeper</span><span class="value">${esc(item.housekeeper || '—')}</span></div>
+      <div class="detail-row"><span class="label">Housekeeper</span><span class="value">${esc(item.housekeeper ? (item.housekeeper2 ? item.housekeeper + ' & ' + item.housekeeper2 : item.housekeeper) : '—')}</span></div>
       <div class="detail-row"><span class="label">Inspector</span><span class="value">${esc(item.inspector || '—')}</span></div>
     </div>
   `;
@@ -1533,7 +1549,7 @@ function exportCSV() {
     s.ratings.forEach(r => ratingLabels[r.id] = r.label);
   });
 
-  const headers = ['Date', 'Time', 'Room', 'Type', 'Bed Config', 'Housekeeper', 'Inspector',
+  const headers = ['Date', 'Time', 'Room', 'Type', 'Bed Config', 'Housekeeper 1', 'Housekeeper 2', 'Inspector',
     ...allCheckIds.map(id => checkLabels[id] || id),
     ...allRatingIds.map(id => ratingLabels[id] || id),
     'Notes'
@@ -1546,7 +1562,7 @@ function exportCSV() {
   }
 
   const rows = all.map(i => [
-    i.date, i.time || '', i.room, i.type, i.bed, i.housekeeper || '', i.inspector || '',
+    i.date, i.time || '', i.room, i.type, i.bed, i.housekeeper || '', i.housekeeper2 || '', i.inspector || '',
     ...allCheckIds.map(id => (i.checks && i.checks[id]) || ''),
     ...allRatingIds.map(id => (i.ratings && i.ratings[id]) || ''),
     i.notes || ''
