@@ -810,7 +810,6 @@ input, textarea, select {
     <textarea class="form-textarea" id="fNotes" placeholder="Optional notes about this room..."></textarea>
   </div>
 
-  <button class="action-btn" id="saveBtn" onclick="saveInspection()" style="margin-top:8px">✓ Save Inspection</button>
 </div>
 
 <!-- HISTORY -->
@@ -852,7 +851,7 @@ input, textarea, select {
   <div class="settings-section">
     <h3>About</h3>
     <p style="font-size:12px;color:var(--text-dim);line-height:1.6">
-      Room QC Inspector v1.5<br>
+      Room QC Inspector v1.6<br>
       <span style="color:var(--text);font-weight:600;letter-spacing:1px">SMC</span> · Shawhan Moleski Communications<br>
       All data stored locally on this device.<br>
       Export to CSV regularly to back up your data.
@@ -1152,7 +1151,7 @@ function startInspection() {
   document.getElementById('viewInspect').classList.add('active');
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === 'inspect'));
   document.getElementById('navTitle').textContent = 'New Inspection';
-  document.getElementById('navBtns').innerHTML = '';
+  document.getElementById('navBtns').innerHTML = '<button class="nav-btn" id="saveBtn" onclick="saveInspection()">✓ Save</button>';
 
   document.getElementById('fDate').value = localDateStr();
   document.getElementById('fRoom').value = '';
