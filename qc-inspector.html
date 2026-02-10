@@ -6,32 +6,32 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Room QC">
-<meta name="theme-color" content="#0f172a">
+<meta name="theme-color" content="#0d0d0d">
 <!-- [FIX #15] PWA manifest via data URI — standalone app behavior on home screen -->
-<link rel="manifest" href="data:application/json,%7B%22name%22%3A%22Room%20QC%20Inspector%22%2C%22short_name%22%3A%22Room%20QC%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230f172a%22%2C%22theme_color%22%3A%22%230f172a%22%7D">
-<title>Room QC Inspector</title>
+<link rel="manifest" href="data:application/json,%7B%22name%22%3A%22Room%20QC%20Inspector%20%7C%20SMC%22%2C%22short_name%22%3A%22Room%20QC%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%230d0d0d%22%2C%22theme_color%22%3A%22%230d0d0d%22%7D">
+<title>Room QC | SMC</title>
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
 :root {
-  --bg: #0f172a;
-  --bg-card: #1e293b;
-  --bg-card-alt: #253449;
-  --bg-input: #0f172a;
-  --border: #334155;
-  --border-focus: #60a5fa;
-  --text: #e2e8f0;
-  --text-dim: #64748b;
-  --text-bright: #f8fafc;
-  --accent: #3b82f6;
-  --accent-dim: rgba(59,130,246,0.15);
-  --green: #22c55e;
-  --green-dim: rgba(34,197,94,0.12);
-  --red: #ef4444;
-  --red-dim: rgba(239,68,68,0.12);
-  --amber: #f59e0b;
-  --amber-dim: rgba(245,158,11,0.12);
+  --bg: #0d0d0d;
+  --bg-card: #1a1a1a;
+  --bg-card-alt: #252525;
+  --bg-input: #111111;
+  --border: #333333;
+  --border-focus: #cc2222;
+  --text: #b3b3b3;
+  --text-dim: #666666;
+  --text-bright: #f0f0f0;
+  --accent: #cc2222;
+  --accent-dim: rgba(204,34,34,0.15);
+  --green: #999999;
+  --green-dim: rgba(153,153,153,0.12);
+  --red: #cc2222;
+  --red-dim: rgba(204,34,34,0.12);
+  --amber: #cc2222;
+  --amber-dim: rgba(204,34,34,0.12);
   --radius: 10px;
 }
 
@@ -61,7 +61,7 @@ input, textarea, select {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(15,23,42,0.92);
+  background: rgba(13,13,13,0.95);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
@@ -85,14 +85,14 @@ input, textarea, select {
   font-weight: 600;
   color: var(--accent);
   background: var(--accent-dim);
-  border: 1px solid rgba(59,130,246,0.25);
+  border: 1px solid rgba(204,34,34,0.25);
   border-radius: 6px;
   padding: 6px 14px;
   cursor: pointer;
   transition: all 0.15s;
 }
 
-.nav-btn:active { background: rgba(59,130,246,0.25); }
+.nav-btn:active { background: rgba(204,34,34,0.25); }
 
 .nav-btns { display: flex; gap: 8px; }
 
@@ -274,7 +274,7 @@ input, textarea, select {
   align-items: center;
   justify-content: space-between;
   padding: 10px 0;
-  border-bottom: 1px solid rgba(51,65,85,0.4);
+  border-bottom: 1px solid rgba(51,51,51,0.5);
 }
 
 .check-item:last-child { border-bottom: none; }
@@ -309,9 +309,9 @@ input, textarea, select {
 }
 
 .toggle-btn.yes.active {
-  background: var(--green-dim);
-  border-color: var(--green);
-  color: var(--green);
+  background: rgba(240,240,240,0.1);
+  border-color: var(--text-bright);
+  color: var(--text-bright);
 }
 
 .toggle-btn.no.active {
@@ -332,7 +332,7 @@ input, textarea, select {
   align-items: center;
   justify-content: space-between;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(51,65,85,0.4);
+  border-bottom: 1px solid rgba(51,51,51,0.5);
 }
 
 .rating-row:last-child { border-bottom: none; }
@@ -435,7 +435,7 @@ input, textarea, select {
 }
 
 .pill.fail { background: var(--red-dim); color: var(--red); }
-.pill.pass { background: var(--green-dim); color: var(--green); }
+.pill.pass { background: rgba(240,240,240,0.08); color: var(--text); }
 .pill.type { background: var(--accent-dim); color: var(--accent); }
 
 .empty-state {
@@ -536,7 +536,7 @@ input, textarea, select {
   font-weight: 600;
   color: var(--accent);
   background: var(--accent-dim);
-  border: 1px solid rgba(59,130,246,0.25);
+  border: 1px solid rgba(204,34,34,0.25);
   border-radius: 8px;
   cursor: pointer;
 }
@@ -590,7 +590,7 @@ input, textarea, select {
   margin-bottom: 10px;
 }
 
-.yn-yes { color: var(--green); }
+.yn-yes { color: var(--text-bright); }
 .yn-no { color: var(--red); }
 .yn-na { color: var(--text-dim); }
 
@@ -600,7 +600,7 @@ input, textarea, select {
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(15,23,42,0.95);
+  background: rgba(13,13,13,0.97);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--border);
@@ -638,8 +638,8 @@ input, textarea, select {
   bottom: 90px;
   left: 50%;
   transform: translateX(-50%) translateY(20px);
-  background: var(--green);
-  color: white;
+  background: var(--text-bright);
+  color: var(--bg);
   font-size: 13px;
   font-weight: 600;
   padding: 10px 24px;
@@ -728,6 +728,7 @@ input, textarea, select {
 <!-- HOME -->
 <div class="view active" id="viewHome">
   <div class="home-header">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;letter-spacing:3px;color:var(--accent);margin-bottom:8px">SMC</div>
     <h2>Room QC Inspector</h2>
     <p id="homeDate"></p>
   </div>
@@ -746,7 +747,7 @@ input, textarea, select {
     </div>
   </div>
   <button class="action-btn" onclick="startInspection()">＋ New Inspection</button>
-  <button class="action-btn secondary" onclick="showView('history')">📋 View History</button>
+  <button class="action-btn secondary" onclick="showView('history')">View History</button>
 </div>
 
 <!-- INSPECT -->
@@ -839,13 +840,14 @@ input, textarea, select {
   </div>
   <div class="settings-section">
     <h3>Data</h3>
-    <button class="action-btn secondary" onclick="exportCSV()" style="margin-bottom:8px">📤 Export All to CSV</button>
-    <button class="action-btn secondary" onclick="confirmClearAll()" style="border-color:var(--red);color:var(--red)">🗑 Clear All Data</button>
+    <button class="action-btn secondary" onclick="exportCSV()" style="margin-bottom:8px">Export All to CSV</button>
+    <button class="action-btn secondary" onclick="confirmClearAll()" style="border-color:var(--red);color:var(--red)">Clear All Data</button>
   </div>
   <div class="settings-section">
     <h3>About</h3>
     <p style="font-size:12px;color:var(--text-dim);line-height:1.6">
-      Room QC Inspector v1.2<br>
+      Room QC Inspector v1.3<br>
+      <span style="color:var(--text);font-weight:600;letter-spacing:1px">SMC</span> · Shawhan Moleski Communications<br>
       All data stored locally on this device.<br>
       Export to CSV regularly to back up your data.
     </p>
@@ -855,7 +857,7 @@ input, textarea, select {
 <!-- TAB BAR -->
 <div class="tab-bar">
   <div class="tab active" onclick="navTo('home')" data-view="home">
-    <div class="tab-icon">🏠</div>
+    <div class="tab-icon">■</div>
     <div class="tab-label">Home</div>
   </div>
   <div class="tab" onclick="navTo('inspect')" data-view="inspect">
@@ -863,11 +865,11 @@ input, textarea, select {
     <div class="tab-label">Inspect</div>
   </div>
   <div class="tab" onclick="navTo('history')" data-view="history">
-    <div class="tab-icon">📋</div>
+    <div class="tab-icon">≡</div>
     <div class="tab-label">History</div>
   </div>
   <div class="tab" onclick="navTo('settings')" data-view="settings">
-    <div class="tab-icon">⚙️</div>
+    <div class="tab-icon">●</div>
     <div class="tab-label">Settings</div>
   </div>
 </div>
@@ -986,7 +988,7 @@ function saveStr(key, val) {
 const CHECKLIST = [
   {
     section: 'Bathroom',
-    icon: '🚿',
+    icon: '◻',
     items: [
       { id: 'bath_hair_floor', label: 'Floor free of hair' },
       { id: 'bath_hair_counter', label: 'Counter free of hair' },
@@ -1003,7 +1005,7 @@ const CHECKLIST = [
   },
   {
     section: 'Bedroom',
-    icon: '🛏',
+    icon: '▬',
     items: [
       { id: 'bed_made', label: 'Bed(s) properly made' },
       { id: 'bed_linens', label: 'Linens clean, no stains' },
@@ -1019,7 +1021,7 @@ const CHECKLIST = [
   },
   {
     section: 'Kitchenette',
-    icon: '🍳',
+    icon: '◇',
     cabinOnly: true,
     items: [
       { id: 'kit_dishes', label: 'Dishes/utensils clean & stocked' },
@@ -1035,7 +1037,7 @@ const CHECKLIST = [
   },
   {
     section: 'General',
-    icon: '✓',
+    icon: '○',
     items: [
       { id: 'gen_door', label: 'Door & lock functioning' },
       { id: 'gen_heat', label: 'Heating working' },
@@ -1221,7 +1223,7 @@ function buildChecklist() {
           <div class="rating-row">
             <div class="rating-label">${esc(r.label)}</div>
             <div class="star-group">
-              ${[1,2,3,4,5].map(n => `<button class="star-btn" data-id="${r.id}" data-val="${n}" onclick="setRating(this)">★</button>`).join('')}
+              ${[1,2,3,4,5].map(n => `<button class="star-btn" data-id="${r.id}" data-val="${n}" onclick="setRating(this)">●</button>`).join('')}
             </div>
           </div>
         `).join('')}
@@ -1356,14 +1358,14 @@ function refreshHistory() {
   const filtered = activeFilter === 'all' ? all : all.filter(i => i.date === activeFilter);
 
   if (filtered.length === 0) {
-    list.innerHTML = `<div class="empty-state"><div style="font-size:36px">📋</div><p>No inspections yet</p></div>`;
+    list.innerHTML = `<div class="empty-state"><div style="font-size:36px;color:var(--text-dim)">◻</div><p>No inspections yet</p></div>`;
     return;
   }
 
   // [FIX #3] All user content escaped
   list.innerHTML = filtered.map(i => {
     const score = (i.ratings && i.ratings.rate_overall) || 0;
-    const scoreColor = score >= 4 ? 'var(--green)' : score >= 3 ? 'var(--amber)' : score > 0 ? 'var(--red)' : 'var(--text-dim)';
+    const scoreColor = score >= 4 ? 'var(--text-bright)' : score >= 3 ? 'var(--text-dim)' : score > 0 ? 'var(--red)' : 'var(--text-dim)';
     const failCount = Object.values(i.checks || {}).filter(v => v === 'N').length;
     const dateStr = new Date(i.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
@@ -1371,7 +1373,7 @@ function refreshHistory() {
       <div class="history-card" onclick="showDetail('${esc(i.id)}')">
         <div class="history-top">
           <div class="history-room">Room ${esc(i.room)}</div>
-          <div class="history-score" style="color:${scoreColor}">${score > 0 ? '★ ' + score + '/5' : 'No rating'}</div>
+          <div class="history-score" style="color:${scoreColor}">${score > 0 ? '● ' + score + '/5' : 'No rating'}</div>
         </div>
         <div class="history-meta">${esc(dateStr)} · ${esc(i.time || '')} · ${esc(i.housekeeper ? (i.housekeeper2 ? i.housekeeper + ' & ' + i.housekeeper2 : i.housekeeper) : 'No HK')} · ${esc(i.inspector || 'No inspector')}</div>
         <div class="history-pills">
@@ -1435,7 +1437,7 @@ function showDetail(id) {
     section.ratings.forEach(r => {
       const v = item.ratings && item.ratings[r.id];
       if (!v) return;
-      html += `<div class="detail-row"><span class="label">${esc(r.label)}</span><span class="value" style="color:var(--amber)">★ ${v}/5</span></div>`;
+      html += `<div class="detail-row"><span class="label">${esc(r.label)}</span><span class="value" style="color:var(--amber)">● ${v}/5</span></div>`;
     });
 
     html += `</div>`;
