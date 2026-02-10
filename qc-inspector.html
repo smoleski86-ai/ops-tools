@@ -97,7 +97,8 @@ input, textarea, select {
 .nav-btns { display: flex; gap: 8px; }
 
 /* ─── VIEWS ─── */
-.view { display: none; padding: 16px; padding-bottom: 100px; }
+/* [FIX #21] Increased padding-bottom to account for tab bar + safe area inset on all devices */
+.view { display: none; padding: 16px; padding-bottom: calc(140px + env(safe-area-inset-bottom)); }
 .view.active { display: block; }
 
 /* ─── HOME VIEW ─── */
@@ -851,7 +852,7 @@ input, textarea, select {
   <div class="settings-section">
     <h3>About</h3>
     <p style="font-size:12px;color:var(--text-dim);line-height:1.6">
-      Room QC Inspector v1.4<br>
+      Room QC Inspector v1.5<br>
       <span style="color:var(--text);font-weight:600;letter-spacing:1px">SMC</span> · Shawhan Moleski Communications<br>
       All data stored locally on this device.<br>
       Export to CSV regularly to back up your data.
