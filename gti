@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="GTI">
+    <meta name="theme-color" content="#060a10">
+    <title>Global Threat Index</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #060a10;
+            --bg-card: #0c1219;
+            --bg-card-hover: #101a25;
+            --border: #15202e;
+            --border-bright: #1e3048;
+            --text: #8b949e;
+            --text-bright: #e6edf3;
+            --text-dim: #484f58;
+            --red: #ff4d4d;
+            --red-dim: rgba(255, 77, 77, 0.12);
+            --green: #2ea043;
+            --green-bright: #3fb950;
+            --green-dim: rgba(46, 160, 67, 0.12);
+            --amber: #d29922;
+            --amber-dim: rgba(210, 153, 34, 0.12);
+            --blue: #58a6ff;
+            --blue-dim: rgba(88, 166, 255, 0.12);
+            --war: #ff4d4d;
+            --resource: #e09b24;
+            --conflict: #58a6ff;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            min-height: 100vh;
+            min-height: 100dvh;
+            padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+            -webkit-user-select: none;
+            user-select: none;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Subtle noise grain overlay */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            opacity: 0.025;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 9999;
+        }
+
+        /* ─── HEADER ─── */
+        .header {
+            padding: 24px 20px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header-pip {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--green-bright);
+            box-shadow: 0 0 8px rgba(63, 185, 80, 0.5);
+            animation: pulse-pip 3s ease-in-out infinite;
+        }
+
+        .header-pip.stale {
+            background: var(--amber);
+            box-shadow: 0 0 8px rgba(210, 153, 34, 0.5);
+        }
+
+        .header-pip.offline {
+            background: var(--red);
+            box-shadow: 0 0 8px rgba(255, 77, 77, 0.5);
+        }
+
+        @keyframes pulse-pip {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .header h1 {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 3.5px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .header-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+        }
+
+        /* ─── TICKER TAPE ─── */
+        .ticker-wrap {
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            overflow: hidden;
+            white-space: nowrap;
+            background: rgba(12, 18, 25, 0.6);
+        }
+
+        .ticker-track {
+            display: inline-flex;
+            animation: ticker-scroll var(--ticker-duration, 80s) linear infinite;
+        }
+
+        .ticker-track:hover {
+            animation-play-state: paused;
+        }
+
+        .ticker-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 28px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 11px;
+            color: var(--text);
+            border-right: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+
+        .ticker-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        @keyframes ticker-scroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+        }
+
+        /* ─── METRICS ─── */
+        .metrics {
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .metric-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: background 0.2s;
+        }
+
+        /* Subtle glow on left edge per category */
+        .metric-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            border-radius: 10px 0 0 10px;
+        }
+
+        .metric-card.war::before { background: var(--war); box-shadow: 0 0 20px var(--red-dim); }
+        .metric-card.resources::before { background: var(--resource); box-shadow: 0 0 20px var(--amber-dim); }
+        .metric-card.conflicts::before { background: var(--conflict); box-shadow: 0 0 20px var(--blue-dim); }
+
+        .metric-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+
+        .metric-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 2.5px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .metric-hits {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            color: var(--text-dim);
+            letter-spacing: 0.5px;
+        }
+
+        .metric-body {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+        }
+
+        .metric-score {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 46px;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: -2px;
+        }
+
+        .metric-delta-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .metric-delta {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 15px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            letter-spacing: -0.5px;
+        }
+
+        .metric-delta.up { color: var(--red); }
+        .metric-delta.down { color: var(--green-bright); }
+        .metric-delta.flat { color: var(--text-dim); }
+
+        .metric-direction {
+            font-family: 'DM Sans', sans-serif;
+            font-size: 9px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .metric-direction.up { color: rgba(255, 77, 77, 0.6); }
+        .metric-direction.down { color: rgba(63, 185, 80, 0.6); }
+        .metric-direction.flat { color: var(--text-dim); }
+
+        .metric-bar-track {
+            height: 2px;
+            background: var(--border);
+            border-radius: 1px;
+            margin-top: 18px;
+            overflow: hidden;
+        }
+
+        .metric-bar-fill {
+            height: 100%;
+            border-radius: 1px;
+            transition: width 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* ─── FOOTER ─── */
+        .footer {
+            padding: 16px 20px 32px;
+            text-align: center;
+        }
+
+        .footer-meta {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            color: var(--text-dim);
+            letter-spacing: 1px;
+            line-height: 1.8;
+        }
+
+        .footer-refresh {
+            display: inline-block;
+            margin-top: 12px;
+            padding: 8px 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.15s;
+        }
+
+        .footer-refresh:active {
+            background: var(--bg-card-hover);
+            border-color: var(--border-bright);
+            color: var(--text);
+        }
+
+        /* ─── STATES ─── */
+        .loading-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 70vh;
+            gap: 24px;
+        }
+
+        .loading-ring {
+            width: 36px;
+            height: 36px;
+            border: 2px solid var(--border);
+            border-top-color: var(--text);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--text-dim);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+        }
+
+        .error-banner {
+            margin: 0 16px 12px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            background: rgba(255, 77, 77, 0.06);
+            border: 1px solid rgba(255, 77, 77, 0.15);
+            font-size: 11px;
+            color: var(--red);
+            text-align: center;
+        }
+
+        /* ─── FADE-IN ANIMATION ─── */
+        .fade-in { animation: fadeUp 0.5s ease-out both; }
+        .fade-in:nth-child(1) { animation-delay: 0.0s; }
+        .fade-in:nth-child(2) { animation-delay: 0.08s; }
+        .fade-in:nth-child(3) { animation-delay: 0.16s; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="header-brand">
+        <div class="header-pip" id="statusPip"></div>
+        <h1>Global Threat Index</h1>
+    </div>
+    <div class="header-time" id="headerTime"></div>
+</div>
+
+<div id="app">
+    <div class="loading-screen">
+        <div class="loading-ring"></div>
+        <div class="loading-label">Scanning Feeds</div>
+    </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  CONFIGURATION
+// ═══════════════════════════════════════════════════
+
+const CONFIG = {
+    CACHE_KEY: 'gti_cache',
+    HISTORY_KEY: 'gti_history',
+    CACHE_TTL: 4 * 60 * 60 * 1000,
+    EMA_ALPHA: 0.3,
+    SCORE_MIDPOINT: 15,
+    SCORE_STEEPNESS: 0.15,
+    FEEDS: [
+        'https://feeds.bbci.co.uk/news/world/rss.xml',
+        'https://www.aljazeera.com/xml/rss/all.xml',
+        'https://feeds.npr.org/1004/rss.xml'
+    ],
+    SOURCE_NAMES: ['BBC', 'Al Jazeera', 'NPR']
+};
+
+// ═══════════════════════════════════════════════════
+//  PHRASE DICTIONARIES
+//  Weight: 1 = minor, 2 = moderate, 3 = strong signal
+// ═══════════════════════════════════════════════════
+
+const DICT = {
+    war: {
+        // ── Strong (3) ──
+        'military strike': 3, 'air strike': 3, 'airstrike': 3, 'airstrikes': 3,
+        'missile launch': 3, 'missile attack': 3, 'ballistic missile': 3,
+        'nuclear test': 3, 'nuclear threat': 3, 'nuclear weapon': 3,
+        'declare war': 3, 'declaration of war': 3, 'acts of war': 3,
+        'ground invasion': 3, 'military invasion': 3,
+        'carpet bombing': 3, 'bombing campaign': 3, 'ethnic cleansing': 3,
+        'genocide': 3, 'chemical weapon': 3, 'biological weapon': 3,
+        'special military operation': 3, 'naval blockade': 3,
+        'war crime': 3, 'war crimes': 3, 'crimes against humanity': 3,
+        // ── Moderate (2) ──
+        'troops deployed': 2, 'troop deployment': 2, 'military buildup': 2,
+        'military operation': 2, 'military offensive': 2, 'ground offensive': 2,
+        'artillery fire': 2, 'artillery shell': 2, 'rocket attack': 2,
+        'drone strike': 2, 'drone attack': 2, 'suicide bomb': 2,
+        'arms shipment': 2, 'weapons delivery': 2, 'military aid': 2,
+        'no-fly zone': 2, 'military escalation': 2, 'armed conflict': 2,
+        'combat zone': 2, 'frontline': 2, 'front line': 2,
+        'civilian casualties': 2, 'civilian deaths': 2, 'mass grave': 2,
+        'cluster munition': 2, 'incendiary weapon': 2, 'thermobaric': 2,
+        'shelling': 2, 'bombardment': 2, 'besieged': 2,
+        // ── Minor (1) ──
+        'military exercise': 1, 'naval drill': 1, 'military drill': 1,
+        'defense spending': 1, 'arms deal': 1, 'weapons sale': 1,
+        'military base': 1, 'air defense': 1, 'missile defense': 1,
+        'conscription': 1, 'mobilization': 1, 'reservists called': 1,
+        'military threat': 1, 'saber rattling': 1, 'show of force': 1,
+        'warplane': 1, 'fighter jet': 1, 'aircraft carrier': 1
+    },
+    resources: {
+        // ── Strong (3) ──
+        'famine': 3, 'mass starvation': 3, 'food crisis': 3,
+        'water crisis': 3, 'water shortage': 3, 'drought emergency': 3,
+        'energy crisis': 3, 'power crisis': 3, 'oil embargo': 3,
+        'crop failure': 3, 'harvest failure': 3, 'food emergency': 3,
+        'humanitarian crisis': 3, 'humanitarian disaster': 3,
+        'resource war': 3, 'water war': 3, 'famine declared': 3,
+        // ── Moderate (2) ──
+        'oil shortage': 2, 'fuel shortage': 2, 'gas shortage': 2,
+        'food shortage': 2, 'grain shortage': 2, 'wheat shortage': 2,
+        'supply chain crisis': 2, 'supply chain disruption': 2,
+        'food insecurity': 2, 'food prices surge': 2, 'food prices soar': 2,
+        'oil prices surge': 2, 'energy prices soar': 2, 'commodity spike': 2,
+        'power outage': 2, 'blackout': 2, 'rolling blackout': 2,
+        'water scarcity': 2, 'aquifer depletion': 2, 'reservoir drought': 2,
+        'deforestation': 2, 'illegal logging': 2, 'overfishing': 2,
+        'chip shortage': 2, 'semiconductor shortage': 2,
+        'fertilizer shortage': 2, 'fertilizer crisis': 2,
+        'mining disaster': 2, 'oil spill': 2, 'pipeline explosion': 2,
+        'grain export ban': 2, 'food export ban': 2,
+        // ── Minor (1) ──
+        'drought': 1, 'heat wave': 1, 'heatwave': 1, 'wildfire': 1,
+        'crop yield': 1, 'food prices': 1, 'oil price': 1,
+        'rare earth': 1, 'lithium mining': 1, 'cobalt mining': 1,
+        'supply chain': 1, 'export ban': 1, 'import restriction': 1,
+        'rationing': 1, 'desertification': 1, 'soil erosion': 1,
+        'biodiversity loss': 1, 'fish stocks': 1, 'water table': 1
+    },
+    conflicts: {
+        // ── Strong (3) ──
+        'coup attempt': 3, "coup d'etat": 3, 'military coup': 3,
+        'civil war': 3, 'martial law': 3, 'state of emergency declared': 3,
+        'political assassination': 3, 'political violence': 3,
+        'ethnic violence': 3, 'sectarian violence': 3,
+        'terrorist attack': 3, 'terror attack': 3,
+        // ── Moderate (2) ──
+        'border clash': 2, 'border conflict': 2, 'border skirmish': 2,
+        'territorial dispute': 2, 'disputed territory': 2,
+        'sanctions imposed': 2, 'trade war': 2, 'economic sanctions': 2,
+        'diplomatic crisis': 2, 'diplomatic row': 2, 'ambassador recalled': 2,
+        'embassy closed': 2, 'embassy stormed': 2, 'embassy attacked': 2,
+        'civil unrest': 2, 'mass protest': 2, 'violent protest': 2,
+        'violent clashes': 2, 'deadly clashes': 2,
+        'riot': 2, 'riots': 2, 'looting': 2,
+        'insurgent': 2, 'insurgency': 2, 'rebel attack': 2,
+        'militia attack': 2, 'paramilitary': 2, 'separatist': 2,
+        'election violence': 2, 'disputed election': 2, 'election fraud': 2,
+        'political crisis': 2, 'government collapse': 2, 'regime change': 2,
+        'hostage': 2, 'kidnapping': 2, 'hijacking': 2,
+        'curfew imposed': 2, 'internet shutdown': 2, 'media blackout': 2,
+        // ── Minor (1) ──
+        'protest': 1, 'protests': 1, 'demonstration': 1, 'demonstrators': 1,
+        'sanctions': 1, 'trade dispute': 1, 'tariff': 1, 'tariffs': 1,
+        'political tension': 1, 'opposition arrested': 1,
+        'press freedom': 1, 'journalist arrested': 1, 'journalist killed': 1,
+        'refugee crisis': 1, 'displaced': 1, 'migration crisis': 1,
+        'tear gas': 1, 'rubber bullets': 1, 'water cannon': 1,
+        'crackdown': 1, 'censorship': 1, 'detain': 1, 'detained': 1
+    }
+};
+
+const DAMPENERS = [
+    'ceasefire', 'peace deal', 'peace agreement', 'peace talks',
+    'peace treaty', 'peace process', 'de-escalation', 'deescalation',
+    'diplomatic solution', 'truce', 'armistice', 'talks resume',
+    'agreement signed', 'treaty signed', 'reconciliation',
+    'troops withdraw', 'withdrawal complete', 'stand down',
+    'aid delivered', 'humanitarian aid arrives', 'relief effort',
+    'reconstruction', 'rebuilding', 'recovery effort',
+    'relations normalized', 'diplomatic ties restored',
+    'prisoners released', 'prisoner exchange', 'hostages freed'
+];
+
+const EXCLUSIONS = [
+    'movie', 'film review', 'book review', 'album review', 'box office',
+    'trailer release', 'celebrity', 'entertainment', 'red carpet',
+    'sports', 'soccer', 'football score', 'basketball', 'tennis',
+    'championship', 'world cup final', 'super bowl',
+    'grammy', 'oscar', 'emmy', 'tony award', 'golden globe',
+    'tv show', 'series premiere', 'season finale', 'netflix', 'streaming',
+    'video game', 'gaming', 'esports',
+    'fashion week', 'recipe', 'cooking', 'lifestyle', 'wellness',
+    'horoscope', 'zodiac', 'anniversary of', 'years ago today',
+    'obituary for', 'in memoriam', 'stock market today',
+    'dow jones', 'nasdaq', 'cryptocurrency', 'bitcoin price'
+];
+
+const GEO_ENTITIES = [
+    'ukraine', 'russia', 'china', 'taiwan', 'north korea', 'south korea',
+    'iran', 'israel', 'palestine', 'gaza', 'west bank', 'lebanon',
+    'syria', 'iraq', 'afghanistan', 'yemen', 'libya', 'somalia',
+    'sudan', 'south sudan', 'ethiopia', 'eritrea', 'congo', 'drc',
+    'myanmar', 'kashmir', 'xinjiang', 'tibet', 'hong kong',
+    'nato', 'european union', 'pentagon', 'kremlin',
+    'south china sea', 'strait of hormuz', 'taiwan strait',
+    'sahel', 'horn of africa', 'middle east', 'persian gulf',
+    'india', 'pakistan', 'mexico', 'venezuela', 'colombia',
+    'nigeria', 'mozambique', 'mali', 'burkina faso', 'niger',
+    'philippines', 'haiti', 'hezbollah', 'hamas', 'houthi',
+    'wagner', 'islamic state', 'isis', 'isil', 'al qaeda', 'al-qaeda',
+    'red sea', 'black sea', 'baltic', 'arctic', 'mediterranean'
+];
+
+// ═══════════════════════════════════════════════════
+//  SCORING ENGINE
+// ═══════════════════════════════════════════════════
+
+function isExcluded(headline) {
+    const h = headline.toLowerCase();
+    return EXCLUSIONS.some(ex => h.includes(ex));
+}
+
+function hasDampener(headline) {
+    const h = headline.toLowerCase();
+    return DAMPENERS.some(d => h.includes(d));
+}
+
+function hasGeoEntity(headline) {
+    const h = headline.toLowerCase();
+    return GEO_ENTITIES.some(e => h.includes(e));
+}
+
+function scoreHeadline(headline, category) {
+    const h = headline.toLowerCase();
+    let score = 0;
+    let matched = false;
+
+    const phrases = DICT[category];
+    for (const [phrase, weight] of Object.entries(phrases)) {
+        if (h.includes(phrase)) {
+            score += weight;
+            matched = true;
+        }
+    }
+
+    if (!matched) return 0;
+
+    // Co-occurrence: geo entity + keyword = bonus
+    if (hasGeoEntity(headline)) score += 1;
+
+    // Dampener: resolution language = reduce
+    if (hasDampener(headline)) score *= 0.3;
+
+    return score;
+}
+
+function sigmoid(x, mid, k) {
+    return 100 / (1 + Math.exp(-k * (x - mid)));
+}
+
+function computeScores(headlines) {
+    const valid = headlines.filter(h => !isExcluded(h));
+    const total = valid.length;
+    if (total === 0) return null;
+
+    const categories = ['war', 'resources', 'conflicts'];
+    const results = {};
+    const scored = [];
+
+    for (const cat of categories) {
+        let raw = 0;
+        let hits = 0;
+
+        for (const headline of valid) {
+            const s = scoreHeadline(headline, cat);
+            if (s > 0) {
+                hits++;
+                raw += s;
+                scored.push({ headline, category: cat, score: s });
+            }
+        }
+
+        // Volume weighting: more coverage = amplified signal
+        const volumeFactor = hits / total;
+        const adjusted = raw * (1 + volumeFactor * 3);
+
+        results[cat] = {
+            score: Math.round(sigmoid(adjusted, CONFIG.SCORE_MIDPOINT, CONFIG.SCORE_STEEPNESS) * 10) / 10,
+            raw, hits
+        };
+    }
+
+    // Dedupe & sort scored headlines for ticker
+    const unique = [];
+    const seen = new Set();
+    scored.sort((a, b) => b.score - a.score);
+    for (const s of scored) {
+        if (!seen.has(s.headline)) {
+            seen.add(s.headline);
+            unique.push(s);
+        }
+    }
+
+    return {
+        war: results.war,
+        resources: results.resources,
+        conflicts: results.conflicts,
+        total,
+        ticker: unique.slice(0, 24),
+        timestamp: Date.now()
+    };
+}
+
+// ═══════════════════════════════════════════════════
+//  EMA SMOOTHING
+// ═══════════════════════════════════════════════════
+
+function getHistory() {
+    try { return JSON.parse(localStorage.getItem(CONFIG.HISTORY_KEY)); }
+    catch { return null; }
+}
+
+function saveHistory(data) {
+    try { localStorage.setItem(CONFIG.HISTORY_KEY, JSON.stringify(data)); }
+    catch {}
+}
+
+function applyEMA(current, history) {
+    const a = CONFIG.EMA_ALPHA;
+    const result = { ...current };
+
+    for (const cat of ['war', 'resources', 'conflicts']) {
+        if (history && history[cat] && typeof history[cat].ema === 'number') {
+            const prev = history[cat].ema;
+            const ema = a * current[cat].score + (1 - a) * prev;
+            result[cat] = { ...current[cat],
+                ema: Math.round(ema * 10) / 10,
+                delta: Math.round((ema - prev) * 10) / 10,
+                prev
+            };
+        } else {
+            result[cat] = { ...current[cat],
+                ema: current[cat].score,
+                delta: 0,
+                prev: current[cat].score
+            };
+        }
+    }
+    return result;
+}
+
+// ═══════════════════════════════════════════════════
+//  DATA FETCHING — dual proxy fallback
+// ═══════════════════════════════════════════════════
+
+async function fetchFeedViaRSS2JSON(url) {
+    const proxy = `https://api.rss2json.com/api.json?rss_url=${encodeURIComponent(url)}`;
+    const resp = await fetch(proxy);
+    if (!resp.ok) throw new Error('rss2json failed');
+    const data = await resp.json();
+    if (data.status !== 'ok' || !data.items) throw new Error('bad data');
+    return data.items.map(i => i.title).filter(Boolean);
+}
+
+async function fetchFeedViaAllOrigins(url) {
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const resp = await fetch(proxy);
+    if (!resp.ok) throw new Error('allorigins failed');
+    const data = await resp.json();
+    if (!data.contents) throw new Error('no contents');
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(data.contents, 'text/xml');
+    return Array.from(doc.querySelectorAll('item title'))
+        .map(el => el.textContent).filter(Boolean);
+}
+
+async function fetchFeed(url) {
+    try { return await fetchFeedViaRSS2JSON(url); } catch {}
+    try { return await fetchFeedViaAllOrigins(url); } catch {}
+    return [];
+}
+
+async function fetchAllHeadlines() {
+    const results = await Promise.allSettled(CONFIG.FEEDS.map(fetchFeed));
+    const headlines = [];
+    const sources = [];
+
+    results.forEach((r, i) => {
+        if (r.status === 'fulfilled' && r.value.length > 0) {
+            headlines.push(...r.value);
+            sources.push(CONFIG.SOURCE_NAMES[i]);
+        }
+    });
+
+    return { headlines, sources };
+}
+
+// ═══════════════════════════════════════════════════
+//  CACHE
+// ═══════════════════════════════════════════════════
+
+function getCache() {
+    try {
+        const d = JSON.parse(localStorage.getItem(CONFIG.CACHE_KEY));
+        return (d && Date.now() - d.timestamp < CONFIG.CACHE_TTL) ? d : null;
+    } catch { return null; }
+}
+
+function getStaleCache() {
+    try { return JSON.parse(localStorage.getItem(CONFIG.CACHE_KEY)); }
+    catch { return null; }
+}
+
+function setCache(data) {
+    try { localStorage.setItem(CONFIG.CACHE_KEY, JSON.stringify(data)); }
+    catch {}
+}
+
+// ═══════════════════════════════════════════════════
+//  RENDERING
+// ═══════════════════════════════════════════════════
+
+const CAT_META = {
+    war:       { label: 'Acts of War',         icon: '⚔',  accent: 'var(--war)' },
+    resources: { label: 'Resource Depletion',   icon: '⛽', accent: 'var(--resource)' },
+    conflicts: { label: 'Conflicts',            icon: '⚡', accent: 'var(--conflict)' }
+};
+
+function severityColor(score) {
+    if (score < 30) return 'var(--green-bright)';
+    if (score < 55) return 'var(--amber)';
+    if (score < 75) return 'var(--red)';
+    return '#ff1a1a';
+}
+
+function buildTicker(items) {
+    if (!items || items.length === 0) return '';
+    const colorMap = { war: 'var(--war)', resources: 'var(--resource)', conflicts: 'var(--conflict)' };
+
+    const html = items.map(it =>
+        `<div class="ticker-item"><span class="ticker-dot" style="background:${colorMap[it.category]}"></span>${it.headline}</div>`
+    ).join('');
+
+    const speed = Math.max(40, items.length * 4);
+
+    return `<div class="ticker-wrap"><div class="ticker-track" style="--ticker-duration:${speed}s">${html}${html}</div></div>`;
+}
+
+function buildMetric(cat, data) {
+    const m = CAT_META[cat];
+    const score = data.ema;
+    const delta = data.delta;
+
+    let dClass = 'flat', arrow = '', dStr = '—', dirLabel = 'stable';
+    if (delta > 0.1) {
+        dClass = 'up'; arrow = '▲'; dStr = '+' + delta.toFixed(1); dirLabel = 'rising';
+    } else if (delta < -0.1) {
+        dClass = 'down'; arrow = '▼'; dStr = delta.toFixed(1); dirLabel = 'falling';
+    }
+
+    return `
+    <div class="metric-card ${cat} fade-in">
+        <div class="metric-head">
+            <div class="metric-label"><span>${m.icon}</span> ${m.label}</div>
+            <div class="metric-hits">${data.hits} headlines</div>
+        </div>
+        <div class="metric-body">
+            <div class="metric-score" style="color:${severityColor(score)}">${score.toFixed(1)}</div>
+            <div class="metric-delta-group">
+                <div class="metric-delta ${dClass}">${arrow} ${dStr}</div>
+                <div class="metric-direction ${dClass}">${dirLabel}</div>
+            </div>
+        </div>
+        <div class="metric-bar-track">
+            <div class="metric-bar-fill" style="width:${Math.min(100, score)}%;background:${severityColor(score)}"></div>
+        </div>
+    </div>`;
+}
+
+function render(data, sources, stale = false) {
+    const app = document.getElementById('app');
+    const pip = document.getElementById('statusPip');
+    const timeEl = document.getElementById('headerTime');
+
+    pip.className = 'header-pip' + (stale ? ' stale' : '');
+
+    const t = new Date(data.timestamp);
+    timeEl.textContent = t.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+    const srcStr = sources.length ? sources.join(' · ') : 'cached';
+    const staleBanner = stale
+        ? '<div class="error-banner">Feed unavailable · showing last cached data</div>'
+        : '';
+
+    app.innerHTML = `
+        ${buildTicker(data.ticker)}
+        ${staleBanner}
+        <div class="metrics">
+            ${buildMetric('war', data.war)}
+            ${buildMetric('resources', data.resources)}
+            ${buildMetric('conflicts', data.conflicts)}
+        </div>
+        <div class="footer">
+            <div class="footer-meta">
+                ${data.total} headlines analyzed · ${srcStr}<br>
+                cache refreshes every 4 hours
+            </div>
+            <div class="footer-refresh" id="refreshBtn">↻ Force Refresh</div>
+        </div>
+    `;
+
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+        localStorage.removeItem(CONFIG.CACHE_KEY);
+        init();
+    });
+}
+
+function renderOffline() {
+    const app = document.getElementById('app');
+    const pip = document.getElementById('statusPip');
+    pip.className = 'header-pip offline';
+    app.innerHTML = `
+    <div class="loading-screen">
+        <div style="font-size:32px;margin-bottom:8px">📡</div>
+        <div class="loading-label">No signal</div>
+        <div style="font-size:12px;color:var(--text-dim);max-width:260px;text-align:center;line-height:1.6;margin-top:8px">
+            Could not reach news feeds and no cached data is available. Check your connection and try again.
+        </div>
+        <div class="footer-refresh" id="retryBtn" style="margin-top:24px">↻ Retry</div>
+    </div>`;
+    document.getElementById('retryBtn').addEventListener('click', init);
+}
+
+// ═══════════════════════════════════════════════════
+//  MAIN
+// ═══════════════════════════════════════════════════
+
+async function init() {
+    const app = document.getElementById('app');
+    app.innerHTML = `<div class="loading-screen"><div class="loading-ring"></div><div class="loading-label">Scanning Feeds</div></div>`;
+
+    // Try cache first
+    const cached = getCache();
+    if (cached) {
+        render(cached, cached.sources || []);
+        return;
+    }
+
+    // Fetch
+    const { headlines, sources } = await fetchAllHeadlines();
+
+    if (headlines.length === 0) {
+        const stale = getStaleCache();
+        if (stale) { render(stale, [], true); }
+        else { renderOffline(); }
+        return;
+    }
+
+    let scores = computeScores(headlines);
+    if (!scores) { renderOffline(); return; }
+
+    scores.sources = sources;
+    scores = applyEMA(scores, getHistory());
+
+    setCache(scores);
+    saveHistory(scores);
+    render(scores, sources);
+}
+
+init();
+</script>
+</body>
+</html>
